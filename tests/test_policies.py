@@ -53,6 +53,30 @@ def test_search_policies_returns_empty_list_for_unrelated_query():
     assert search_policies("xylophone intergalactic quasar blorf") == []
 
 
+def test_search_policies_dairy_removal_ranks_formal_policy_or_faq_first():
+    # politica_mermas_y_caducidad.pdf p.4, section 5.2, states dairy products
+    # are removed from the shelf two days before their expiration date; the
+    # FAQ's "3 Mermas y perecederos" section covers the same topic more loosely.
+    results = search_policies(
+        "¿Cuántos días antes de la fecha de caducidad se debe retirar la leche del anaquel?"
+    )
+    top = results[0]
+    assert (
+        top["document"] == "politica_mermas_y_caducidad.pdf"
+        and top["section"] == "5.2 Regla específica para lácteos"
+    ) or top["document"] == "faq_gerentes_de_tienda.pdf"
+    assert all(not row["section"].endswith("Control de cambios") for row in results)
+    assert all(row["version"] for row in results)
+
+
+def test_search_policies_excludes_control_de_cambios_sections():
+    # "Control de cambios" is a changelog table, not answerable policy content.
+    assert all(
+        not row["section"].endswith("Control de cambios")
+        for row in search_policies("¿Qué cambios ha tenido este documento?")
+    )
+
+
 def test_search_policies_rejects_text_of_only_stopwords():
     with pytest.raises(ValueError, match="stopwords"):
         search_policies("de la y en")
