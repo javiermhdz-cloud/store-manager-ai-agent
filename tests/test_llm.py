@@ -65,12 +65,23 @@ def test_generate_passes_tools_and_system_instruction_and_logs_only_usage(fake_c
     assert usage["thinking_tokens"] == 1
     call = fake_client.models.calls[0]
     assert call["model"] == "test-model"
+    assert call["config"]["thinking_config"] == {"thinking_level": "LOW"}
     assert call["config"]["tools"] == [{"function_declarations": [{"name": "lookup"}]}]
     assert call["config"]["system_instruction"] == "Be accurate"
     logged = json.loads(llm.USAGE_LOG_PATH.read_text(encoding="utf-8"))
     assert logged == usage
     assert "private prompt" not in llm.USAGE_LOG_PATH.read_text(encoding="utf-8")
     assert "test-secret" not in llm.USAGE_LOG_PATH.read_text(encoding="utf-8")
+
+
+def test_thinking_level_uses_environment_override(fake_client, monkeypatch):
+    monkeypatch.setenv("LLM_THINKING_LEVEL", "medium")
+
+    llm.generate("Hola")
+
+    assert fake_client.models.calls[0]["config"]["thinking_config"] == {
+        "thinking_level": "MEDIUM"
+    }
 
 
 def test_generate_retries_rate_limits_and_logs_each_attempt(fake_client, monkeypatch):

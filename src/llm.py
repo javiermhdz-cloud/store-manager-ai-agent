@@ -15,9 +15,11 @@ from google import genai
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 USAGE_LOG_PATH = PROJECT_ROOT / "logs" / "usage.jsonl"
+INTERACTIONS_LOG_PATH = PROJECT_ROOT / "logs" / "interactions.jsonl"
 DEFAULT_MODEL = "gemini-3.5-flash"
 _call_lock = threading.Lock()
 _last_call_started: float | None = None
+_usage_log_lock = threading.Lock()
 
 
 def _minimum_interval() -> float:
@@ -66,8 +68,28 @@ def _usage_record(model: str, interaction_type: str, response: Any = None) -> di
 
 def _append_usage(record: dict[str, object]) -> None:
     USAGE_LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with USAGE_LOG_PATH.open("a", encoding="utf-8") as log_file:
-        log_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+    with _usage_log_lock:
+        with USAGE_LOG_PATH.open("a", encoding="utf-8") as log_file:
+            log_file.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def finalize_usage_records(
+    records: list[dict[str, object]], interaction_type: str
+) -> None:
+    """Replace provisional per-call types once the router classifies the question."""
+    timestamps = {record.get("timestamp") for record in records}
+    if not timestamps or not USAGE_LOG_PATH.exists():
+        return
+    with _usage_log_lock:
+        lines = USAGE_LOG_PATH.read_text(encoding="utf-8").splitlines()
+        updated_lines = []
+        for line in lines:
+            record = json.loads(line)
+            if record.get("timestamp") in timestamps:
+                record["interaction_type"] = interaction_type
+                line = json.dumps(record, ensure_ascii=False)
+            updated_lines.append(line)
+        USAGE_LOG_PATH.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
 
 
 def _is_rate_limit(error: Exception) -> bool:
@@ -94,6 +116,8 @@ def generate(
         config["tools"] = tools
     if system_instruction is not None:
         config["system_instruction"] = system_instruction
+    thinking_level = os.getenv("LLM_THINKING_LEVEL", "low").upper()
+    config["thinking_config"] = {"thinking_level": thinking_level}
 
     client = genai.Client(api_key=api_key)
     for retry in range(4):
@@ -118,8 +142,10 @@ def generate(
     raise RuntimeError("Generation failed after rate-limit retries")
 
 
-def summarize_usage(path: str | Path = USAGE_LOG_PATH) -> dict[str, dict[str, float | int]]:
-    """Return call counts and average token usage grouped by interaction type."""
+def summarize_usage(
+    path: str | Path = INTERACTIONS_LOG_PATH,
+) -> dict[str, dict[str, float | int]]:
+    """Return question counts and average token usage grouped by interaction type."""
     totals: dict[str, dict[str, float | int]] = defaultdict(
         lambda: {"calls": 0, "input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0, "thinking_calls": 0}
     )
@@ -128,7 +154,8 @@ def summarize_usage(path: str | Path = USAGE_LOG_PATH) -> dict[str, dict[str, fl
             if not line.strip():
                 continue
             record = json.loads(line)
-            summary = totals[str(record["interaction_type"])]
+            interaction_type = record.get("type", record.get("interaction_type", "unknown"))
+            summary = totals[str(interaction_type)]
             summary["calls"] += 1
             summary["input_tokens"] += int(record.get("input_tokens", 0))
             summary["output_tokens"] += int(record.get("output_tokens", 0))
