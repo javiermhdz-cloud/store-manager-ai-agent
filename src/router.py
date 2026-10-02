@@ -345,7 +345,10 @@ def answer(question: str, history: list[Any] | None = None) -> str:
                 final_answer = _refusal()
             else:
                 final_answer = retry_answer
+    #except Exception:
+    #    final_answer = "No pude consultar la información disponible. Verifica la configuración e inténtalo de nuevo."
     except Exception:
+        import traceback; traceback.print_exc()
         final_answer = "No pude consultar la información disponible. Verifica la configuración e inténtalo de nuevo."
     finally:
         interaction_type = _interaction_type(used_tools)
