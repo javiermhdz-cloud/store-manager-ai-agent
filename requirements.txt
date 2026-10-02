@@ -2,3 +2,4 @@ pandas==3.0.6
 pytest==8.4.2
 pypdf==6.19.0
 google-genai==1.55.0
+streamlit==1.64.0

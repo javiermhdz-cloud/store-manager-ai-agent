@@ -276,6 +276,41 @@ def test_grounding_retries_once_then_refuses_and_logs_failure(
 
 
 def test_numeric_grounding_allows_values_from_the_question_or_tool_results():
-    assert router._grounded("En 2026-06-01 se vendieron 1,430 unidades.", "¿Y 1,430?", [{"count": 1430.0}])
+    assert router._grounded("Se vendieron 1,430 unidades.", "¿Y 1,430?", [{"count": 1430.0}])
     assert not router._grounded("Se vendieron 99 unidades.", "¿Cuántas?", [{"count": 12}])
     assert not router._grounded("El saldo fue -5.", "¿Cuál fue el saldo?", [{"saldo": 5}])
+
+
+def test_grounded_accepts_followup_with_iso_date_in_tool_result():
+    tool_results = [{
+        "filters": {"start_date": "2026-06-01", "end_date": "2026-06-01",
+                    "store_id": "T02", "sku": "SKU-1041"},
+        "results": [{"dia": "2026-06-01", "unidades": 22, "venta_neta_mxn": 682.0}],
+    }]
+    answer = ("El SKU-1041 en la tienda T02 vendió $682.00 MXN netos "
+              "(22 unidades) el día 1 de junio de 2026.")
+    assert router._grounded(answer, "¿y en la tienda T02?", tool_results)
+
+
+def test_grounded_rejects_invented_number():
+    tool_results = [{"filters": {"start_date": "2026-06-01"},
+                     "results": [{"unidades": 22, "venta_neta_mxn": 682.0}]}]
+    answer = "Vendió 23 unidades por $682.00 el 1 de junio de 2026."
+    assert not router._grounded(answer, "pregunta", tool_results)
+
+
+def test_grounded_rejects_wrong_date():
+    tool_results = [{"filters": {"start_date": "2026-06-01"},
+                     "results": [{"unidades": 22}]}]
+    answer = "Vendió 22 unidades el 15 de junio de 2026."
+    assert not router._grounded(answer, "pregunta", tool_results)
+
+def test_grounded_rejects_iso_date_not_in_sources():
+    answer = "El 2026-06-15 se vendieron 22 unidades."
+    assert not router._grounded(answer, "pregunta", [{"unidades": 22}])
+
+
+def test_grounded_accepts_iso_date_present_in_tool_result():
+    tool_results = [{"dia": "2026-06-01", "unidades": 22}]
+    answer = "El 2026-06-01 se vendieron 22 unidades."
+    assert router._grounded(answer, "pregunta", tool_results)

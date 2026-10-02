@@ -216,10 +216,22 @@ _DATE_RE = re.compile(r"\b\d{4}-\d{2}-\d{2}\b")
 _SECTION_RE = re.compile(r"§\s*\d+(?:\.\d+)*")
 
 
+def _normalize_number(value: str) -> str:
+    try:
+        return str(Decimal(value.replace(",", "")).normalize())
+    except Exception:
+        return value.replace(",", "")
+
+
 def _numbers(text: str) -> set[str]:
+    numbers: set[str] = set()
+    # An ISO date contributes its year, month and day as allowed numbers,
+    # so "2026-06-01" in a tool result supports "1 de junio de 2026".
+    for date_match in _DATE_RE.finditer(text):
+        for part in date_match.group().split("-"):
+            numbers.add(_normalize_number(str(int(part))))
     text = _DATE_RE.sub(" ", text)
     text = _SECTION_RE.sub(" ", text)
-    numbers: set[str] = set()
     for match in _NUMBER_RE.finditer(text):
         value = match.group()
         prefix = text[: match.start()]
@@ -227,10 +239,7 @@ def _numbers(text: str) -> set[str]:
             preceding = prefix[-2] if len(prefix) > 1 else ""
             if not preceding or not preceding.isalnum():
                 value = prefix[-1] + value
-        try:
-            numbers.add(str(Decimal(value.replace(",", "")).normalize()))
-        except Exception:
-            numbers.add(value.replace(",", ""))
+        numbers.add(_normalize_number(value))
     return numbers
 
 
