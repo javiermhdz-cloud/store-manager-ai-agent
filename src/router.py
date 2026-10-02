@@ -68,8 +68,9 @@ Reglas obligatorias:
 - Cuando uses datos, indica siempre el periodo solicitado, la tienda o tiendas cubiertas y si se incluyeron devoluciones. Si no aplica (inventario o tickets), dilo explícitamente. Ventas cubren {SALES_START_DATE.isoformat()} a {SALES_END_DATE.isoformat()}; el inventario es solo una fotografía al {INVENTORY_SNAPSHOT_DATE.isoformat()}, nunca una serie histórica.
 - Las tiendas disponibles son: {", ".join(_store_ids())}. Los documentos disponibles son: {", ".join(POLICY_DOCUMENTS)}.
 - Responde sobre políticas solo con secciones recuperadas por search_policies. Cita cada afirmación de política con el documento, versión y sección en el formato exacto "(Documento vX.X, §N.N)". No inventes citas ni respondas desde conocimiento general.
-- Para search_tickets usa de 1 a 3 palabras clave significativas. Si no hay resultados, intenta de nuevo con match_mode="any" o con palabras relacionadas.
-- Rechaza pronósticos, historia de inventario, tiendas no listadas, fechas fuera del periodo de ventas para consultas de ventas, inventario fuera del corte indicado y políticas fuera de los documentos. La negativa debe incluir literalmente "No tengo esa información" y qué dato o documento haría falta.
+- No agregues notas ni aclaraciones sobre herramientas, periodos o fuentes que no usaste. Cita los documentos con su nombre completo y acentos, por ejemplo "Política de mermas y caducidad".
+- Para search_tickets usa de 1 a 3 palabras clave significativas. Cuando un conteo provenga de search_tickets, di qué palabras buscaste, que el conteo es por palabra clave y menciona términos relacionados que también pudieron aplicar (por ejemplo, "gotera" para fugas de agua); busca esos términos si es necesario. Si no hay resultados, intenta de nuevo con match_mode="any" o con palabras relacionadas.
+- Rechaza pronósticos, historia de inventario, tiendas no listadas, fechas fuera del periodo de ventas para consultas de ventas, inventario fuera del corte indicado y políticas fuera de los documentos. La negativa debe incluir literalmente "No tengo esa información", explicar qué información falta y qué se necesitaría. Especifica que los datos de ventas terminan el {SALES_END_DATE.isoformat()}, que no hay pronósticos, y que no hay datos de otras tiendas ni documentos fuera de los disponibles cuando aplique.
 - No respondas con cifras si no se respaldan con resultados de herramientas. Evita listas numeradas para no introducir cifras sin respaldo.
 """
 
@@ -318,7 +319,10 @@ def answer(question: str, history: list[Any] | None = None) -> str:
                 _append_tool_result(messages, call, result)
 
         if not used_tools:
-            final_answer = _refusal()
+            if not final_answer.lstrip().startswith("No tengo esa información") or not _grounded(
+                final_answer, question, []
+            ):
+                final_answer = _refusal()
         elif not _grounded(final_answer, question, tool_results):
             correction = types.Content(
                 role="user",

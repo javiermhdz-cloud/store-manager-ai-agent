@@ -148,6 +148,56 @@ def test_history_is_limited_to_last_six_messages(monkeypatch, router_logs):
     assert len(messages) == 7
 
 
+def test_system_prompt_includes_source_and_ticket_search_guidance(monkeypatch, router_logs):
+    fake_llm = FakeLLM([_response(_content("final"), text="No tengo esa información.")])
+    _set_fake_llm(monkeypatch, fake_llm)
+
+    router.answer("¿Qué información falta?")
+
+    system_instruction = fake_llm.calls[0][1]["system_instruction"]
+    assert "No agregues notas ni aclaraciones sobre herramientas, periodos o fuentes que no usaste." in system_instruction
+    assert 'Cita los documentos con su nombre completo y acentos, por ejemplo "Política de mermas y caducidad".' in system_instruction
+    assert "el conteo es por palabra clave" in system_instruction
+    assert '"gotera" para fugas de agua' in system_instruction
+    assert "terminan el 2026-08-31" in system_instruction
+    assert "no hay pronósticos" in system_instruction
+    assert "no hay datos de otras tiendas ni documentos fuera de los disponibles" in system_instruction
+
+
+@pytest.mark.parametrize(
+    ("question", "model_answer", "expected"),
+    [
+        (
+            "¿Qué información falta?",
+            "No tengo esa información. Falta el documento correspondiente.",
+            "No tengo esa información. Falta el documento correspondiente.",
+        ),
+        (
+            "¿Qué pasó el 2026-08-31?",
+            "No tengo esa información para el 2026-08-31.",
+            "No tengo esa información para el 2026-08-31.",
+        ),
+        (
+            "¿Qué información falta?",
+            "No tengo esa información. Hay 12 registros.",
+            router._refusal(),
+        ),
+        (
+            "¿Qué información falta?",
+            "Necesitaría un documento adicional.",
+            router._refusal(),
+        ),
+    ],
+)
+def test_no_tool_reply_preserves_only_grounded_model_refusals(
+    monkeypatch, router_logs, question, model_answer, expected
+):
+    fake_llm = FakeLLM([_response(_content("final"), text=model_answer)])
+    _set_fake_llm(monkeypatch, fake_llm)
+
+    assert router.answer(question) == expected
+
+
 def test_classification_combines_data_and_policy_tools(monkeypatch, router_logs):
     interactions, _ = router_logs
     fake_llm = FakeLLM(
