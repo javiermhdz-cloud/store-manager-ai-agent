@@ -12,6 +12,7 @@ from decimal import Decimal
 from pathlib import Path
 from types import UnionType
 from typing import Any, Callable, Literal, Union, get_args, get_origin, get_type_hints
+import os
 
 from google.genai import types
 
@@ -350,6 +351,13 @@ def answer(question: str, history: list[Any] | None = None) -> str:
     except Exception:
         import traceback; traceback.print_exc()
         final_answer = "No pude consultar la información disponible. Verifica la configuración e inténtalo de nuevo."
+    except Exception as error:
+        if os.getenv("LLM_DEBUG") == "1":
+            print(f"[router error] {type(error).__name__}: {error}")
+        if llm._is_retryable(error):
+            final_answer = "El servicio del modelo está saturado, intenta de nuevo en un momento."
+        else:
+            final_answer = "No pude consultar la información disponible. Verifica la configuración e inténtalo de nuevo."
     finally:
         interaction_type = _interaction_type(used_tools)
         llm.finalize_usage_records(usage_records, interaction_type)

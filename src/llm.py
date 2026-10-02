@@ -10,6 +10,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+import random
 
 from google import genai
 
@@ -91,12 +92,55 @@ def finalize_usage_records(
             updated_lines.append(line)
         USAGE_LOG_PATH.write_text("\n".join(updated_lines) + "\n", encoding="utf-8")
 
+RETRYABLE_STATUS_CODES = {429, 500, 503}
+MAX_ATTEMPTS = 5
+
+
+def _status_code(error: Exception) -> int | None:
+    code = getattr(error, "code", None) or getattr(error, "status_code", None)
+    response = getattr(error, "response", None)
+    return code or getattr(response, "status_code", None)
+
 
 def _is_rate_limit(error: Exception) -> bool:
-    status_code = getattr(error, "code", None) or getattr(error, "status_code", None)
-    response = getattr(error, "response", None)
-    status_code = status_code or getattr(response, "status_code", None)
-    return status_code == 429
+    return _status_code(error) == 429
+
+
+def _is_retryable(error: Exception) -> bool:
+    return _status_code(error) in RETRYABLE_STATUS_CODES
+
+
+def _build_config(model: str, tools: Any, system_instruction: str | None) -> dict[str, object]:
+    config: dict[str, object] = {}
+    if tools is not None:
+        config["tools"] = tools
+    if system_instruction is not None:
+        config["system_instruction"] = system_instruction
+    if not model.lower().startswith("gemma"):
+        thinking_level = os.getenv("LLM_THINKING_LEVEL", "low").upper()
+        config["thinking_config"] = {"thinking_level": thinking_level}
+    return config
+
+
+def _call_with_retries(client, model, messages, config, interaction_type):
+    for attempt in range(MAX_ATTEMPTS):
+        _wait_for_call_slot()
+        try:
+            response = client.models.generate_content(
+                model=model,
+                contents=messages,
+                config=config or None,
+            )
+        except Exception as error:
+            _append_usage(_usage_record(model, interaction_type))
+            if not _is_retryable(error) or attempt == MAX_ATTEMPTS - 1:
+                raise
+            time.sleep(2 ** (attempt + 1) + random.uniform(0, 1))
+            continue
+        usage = _usage_record(model, interaction_type, response)
+        _append_usage(usage)
+        return response, usage
+    raise RuntimeError("Generation failed after retries")
 
 
 def generate(
@@ -111,35 +155,21 @@ def generate(
         raise RuntimeError("GEMINI_API_KEY is not set")
 
     model = os.getenv("LLM_MODEL", DEFAULT_MODEL)
-    config: dict[str, object] = {}
-    if tools is not None:
-        config["tools"] = tools
-    if system_instruction is not None:
-        config["system_instruction"] = system_instruction
-    thinking_level = os.getenv("LLM_THINKING_LEVEL", "low").upper()
-    config["thinking_config"] = {"thinking_level": thinking_level}
-
+    fallback = os.getenv("LLM_FALLBACK_MODEL")
     client = genai.Client(api_key=api_key)
-    for retry in range(4):
-        _wait_for_call_slot()
-        try:
-            response = client.models.generate_content(
-                model=model,
-                contents=messages,
-                config=config or None,
+    try:
+        return _call_with_retries(
+            client, model, messages,
+            _build_config(model, tools, system_instruction), interaction_type,
+        )
+    except Exception as error:
+        if fallback and fallback != model and _is_retryable(error):
+            return _call_with_retries(
+                client, fallback, messages,
+                _build_config(fallback, tools, system_instruction), interaction_type,
             )
-        except Exception as error:
-            _append_usage(_usage_record(model, interaction_type))
-            if not _is_rate_limit(error) or retry == 3:
-                raise
-            time.sleep(2**retry)
-            continue
+        raise
 
-        usage = _usage_record(model, interaction_type, response)
-        _append_usage(usage)
-        return response, usage
-
-    raise RuntimeError("Generation failed after rate-limit retries")
 
 
 def summarize_usage(

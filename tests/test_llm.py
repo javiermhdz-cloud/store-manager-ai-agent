@@ -6,6 +6,10 @@ import pytest
 import src.llm as llm
 
 
+@pytest.fixture(autouse=True)
+def _no_fallback_model(monkeypatch):
+    monkeypatch.delenv("LLM_FALLBACK_MODEL", raising=False)
+
 class FakeModels:
     def __init__(self, responses):
         self.responses = iter(responses)
@@ -74,6 +78,27 @@ def test_generate_passes_tools_and_system_instruction_and_logs_only_usage(fake_c
     assert "test-secret" not in llm.USAGE_LOG_PATH.read_text(encoding="utf-8")
 
 
+def test_gemma_omits_thinking_config_but_keeps_tools_system_instruction_and_usage(
+    fake_client, monkeypatch
+):
+    monkeypatch.setenv("LLM_MODEL", "gemma-3-27b-it")
+
+    _, usage = llm.generate(
+        "Hola",
+        tools=[{"function_declarations": [{"name": "lookup"}]}],
+        system_instruction="Be accurate",
+        interaction_type="datos",
+    )
+
+    config = fake_client.models.calls[0]["config"]
+    assert "thinking_config" not in config
+    assert config["tools"] == [{"function_declarations": [{"name": "lookup"}]}]
+    assert config["system_instruction"] == "Be accurate"
+    assert usage["input_tokens"] == 4
+    assert usage["output_tokens"] == 2
+    assert json.loads(llm.USAGE_LOG_PATH.read_text(encoding="utf-8")) == usage
+
+
 def test_thinking_level_uses_environment_override(fake_client, monkeypatch):
     monkeypatch.setenv("LLM_THINKING_LEVEL", "medium")
 
@@ -92,7 +117,8 @@ def test_generate_retries_rate_limits_and_logs_each_attempt(fake_client, monkeyp
     _, usage = llm.generate("Hola", interaction_type="politica")
 
     assert len(fake_client.models.calls) == 2
-    assert delays == [1]
+    assert len(delays) == 1
+    assert 2 <= delays[0] < 3
     records = [json.loads(line) for line in llm.USAGE_LOG_PATH.read_text(encoding="utf-8").splitlines()]
     assert len(records) == 2
     assert records[0]["input_tokens"] == records[0]["output_tokens"] == 0
@@ -127,15 +153,49 @@ def test_summarize_usage_averages_tokens_by_interaction_type(tmp_path):
         }
     }
 
-
-def test_rate_limit_retries_at_most_three_times(fake_client, monkeypatch):
+def test_rate_limit_retries_at_most_five_attempts(fake_client, monkeypatch):
     error = FakeRateLimit()
-    fake_client.models.responses = iter([error, error, error, error])
+    fake_client.models.responses = iter([error] * 5)
     monkeypatch.setattr(llm.time, "sleep", lambda _: None)
 
     with pytest.raises(FakeRateLimit):
         llm.generate("Hola")
 
-    assert len(fake_client.models.calls) == 4
-    records = llm.USAGE_LOG_PATH.read_text(encoding="utf-8").splitlines()
-    assert len(records) == 4
+    assert len(fake_client.models.calls) == 5
+    
+class FakeServerError(Exception):
+    def __init__(self, code):
+        super().__init__(f"server error {code}")
+        self.code = code
+
+
+def test_server_errors_are_retried(fake_client, monkeypatch):
+    fake_client.models.responses = iter([FakeServerError(503), FakeServerError(500), _response()])
+    monkeypatch.setattr(llm.time, "sleep", lambda _: None)
+
+    llm.generate("Hola")
+
+    assert len(fake_client.models.calls) == 3
+
+
+def test_client_errors_are_not_retried(fake_client, monkeypatch):
+    fake_client.models.responses = iter([FakeServerError(400), _response()])
+    monkeypatch.setattr(llm.time, "sleep", lambda _: None)
+
+    with pytest.raises(FakeServerError):
+        llm.generate("Hola")
+
+    assert len(fake_client.models.calls) == 1
+
+
+def test_fallback_model_used_after_retries(fake_client, monkeypatch):
+    fake_client.models.responses = iter([FakeServerError(503)] * 5 + [_response()])
+    monkeypatch.setattr(llm.time, "sleep", lambda _: None)
+    monkeypatch.setenv("LLM_FALLBACK_MODEL", "gemma-4-31b-it")
+
+    llm.generate("Hola")
+
+    assert len(fake_client.models.calls) == 6
+    last = fake_client.models.calls[-1]
+    assert last["model"] == "gemma-4-31b-it"
+    assert "thinking_config" not in (last["config"] or {})
