@@ -34,7 +34,8 @@ En GitHub Codespaces, guarda la clave como secreto `GEMINI_API_KEY` (Settings �
 |---|---|---|
 | `GEMINI_API_KEY` | Clave de la API (obligatoria) | — |
 | `LLM_MODEL` | Modelo principal | `gemini-3.5-flash` |
-| `LLM_FALLBACK_MODEL` | Modelo de respaldo si el principal falla por saturación (503/500) | sin respaldo |
+| `LLM_FALLBACK_MODEL` | Modelo de respaldo si el principal falla por s
+aturación (503/500) | sin respaldo |
 | `LLM_THINKING_LEVEL` | Nivel de razonamiento de los modelos Gemini (no aplica a Gemma) | `low` |
 | `LLM_MIN_INTERVAL_SECONDS` | Pausa mínima, en segundos, entre llamadas al modelo | `0` (sin pausa) |
 | `LLM_DEBUG` | Con `1`, imprime el tipo de error del router (nunca la pregunta ni la clave) | apagado |
