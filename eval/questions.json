@@ -1,0 +1,497 @@
+[
+ {
+  "id": "D01",
+  "category": "datos",
+  "question": "¿Cuánto vendió el SKU-1041 en la tienda T01 el 1 de junio de 2026?",
+  "numbers": [
+   [
+    837,
+    0
+   ],
+   [
+    27,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "D02",
+  "category": "datos",
+  "question": "¿Cuál fue la venta neta de la tienda T03 en julio de 2026?",
+  "numbers": [
+   [
+    927240.99,
+    1
+   ]
+  ]
+ },
+ {
+  "id": "D03",
+  "category": "datos",
+  "question": "¿Cuántas unidades de la categoría Lácteos se vendieron en la tienda T01 en agosto de 2026?",
+  "numbers": [
+   [
+    7031,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "D04",
+  "category": "datos",
+  "question": "¿Cuál fue el producto con mayor venta neta en la tienda T04 en agosto de 2026?",
+  "contains": [
+   [
+    "SKU-1026",
+    "carne molida"
+   ]
+  ]
+ },
+ {
+  "id": "D05",
+  "category": "datos",
+  "question": "¿Cuál fue el producto con más unidades vendidas en la tienda T02 en junio de 2026?",
+  "contains": [
+   [
+    "SKU-1078",
+    "refresco de cola"
+   ]
+  ],
+  "numbers": [
+   [
+    1309,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "D06",
+  "category": "datos",
+  "question": "¿Cuánto se vendió por Ecommerce en la tienda T01 en junio de 2026?",
+  "numbers": [
+   [
+    58342,
+    1
+   ]
+  ]
+ },
+ {
+  "id": "D07",
+  "category": "datos",
+  "question": "¿Cuánto se vendió por Ecommerce en la tienda T03 en julio de 2026?",
+  "contains": [
+   [
+    "no hay",
+    "no tiene",
+    "no cuenta",
+    "no registra",
+    "sin ventas",
+    "no existe",
+    "$0",
+    "0.00",
+    "no se registran"
+   ]
+  ],
+  "note": "Trampa: Ecommerce solo existe en tiendas Supermercado (T01 y T02); T03 es Mi Tienda."
+ },
+ {
+  "id": "D08",
+  "category": "datos",
+  "question": "¿Cuántas unidades se devolvieron en la tienda T01 en julio de 2026?",
+  "numbers": [
+   [
+    76,
+    0
+   ]
+  ],
+  "hard": true,
+  "note": "Dificil: no hay herramienta de devoluciones; requiere restar dos consultas. Se espera fallo o rechazo."
+ },
+ {
+  "id": "I01",
+  "category": "datos",
+  "question": "¿Cuántos productos están en o por debajo de su punto de reorden en la tienda T02?",
+  "numbers": [
+   [
+    3,
+    0
+   ]
+  ],
+  "contains": [
+   [
+    "SKU-1013",
+    "bolillo"
+   ],
+   [
+    "SKU-1017",
+    "tortillas de maiz"
+   ],
+   [
+    "SKU-1040",
+    "cebolla"
+   ]
+  ]
+ },
+ {
+  "id": "I02",
+  "category": "datos",
+  "question": "¿Cuánta existencia hay de SKU-1015 en la tienda T01 y cuál es su punto de reorden?",
+  "numbers": [
+   [
+    138,
+    0
+   ],
+   [
+    55,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "I03",
+  "category": "datos",
+  "question": "¿Cuántos productos de la tienda T01 tienen un lote que caduca entre el 1 y el 8 de septiembre de 2026?",
+  "numbers": [
+   [
+    17,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "I04",
+  "category": "datos",
+  "question": "¿Qué producto sustituye a la Leche entera 1 L, que fue descontinuada?",
+  "contains": [
+   [
+    "SKU-1121",
+    "nueva presentacion"
+   ]
+  ]
+ },
+ {
+  "id": "I05",
+  "category": "datos",
+  "question": "¿Cuántos productos de la tienda T04 están por debajo de su punto de reorden?",
+  "numbers": [
+   [
+    6,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "K01",
+  "category": "datos",
+  "question": "¿Cuántos tickets de prioridad Crítica hay en total?",
+  "numbers": [
+   [
+    8,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "K02",
+  "category": "datos",
+  "question": "¿Cuántos tickets están en estado Abierto?",
+  "numbers": [
+   [
+    9,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "K03",
+  "category": "datos",
+  "question": "¿Cuántos tickets ha generado la tienda T03?",
+  "numbers": [
+   [
+    90,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "K04",
+  "category": "datos",
+  "question": "¿Cuántos tickets de la categoría TI tiene la tienda T01?",
+  "numbers": [
+   [
+    23,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "K05",
+  "category": "datos",
+  "question": "¿Cuántos tickets hay sobre fugas de agua?",
+  "numbers": [
+   [
+    6,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "K06",
+  "category": "datos",
+  "question": "¿Cuántos tickets de prioridad Alta están en estado Abierto?",
+  "numbers": [
+   [
+    2,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "P01",
+  "category": "politica",
+  "question": "¿Cuál es el plazo para devolver un producto perecedero?",
+  "numbers": [
+   [
+    48,
+    0
+   ]
+  ],
+  "cite_docs_any": [
+   "devoluciones",
+   "preguntas frecuentes",
+   "faq"
+  ]
+ },
+ {
+  "id": "P02",
+  "category": "politica",
+  "question": "¿Se pueden devolver los medicamentos?",
+  "contains": [
+   [
+    "sin devolucion",
+    "no se pueden",
+    "no procede",
+    "no aplica",
+    "no es posible",
+    "no se aceptan",
+    "no se permite",
+    "no pueden devolverse"
+   ]
+  ],
+  "cite_docs_any": [
+   "devoluciones",
+   "preguntas frecuentes",
+   "faq"
+  ]
+ },
+ {
+  "id": "P03",
+  "category": "politica",
+  "question": "Un producto no perecedero con defecto de fabricación ya pasó el plazo de devolución. ¿Todavía se puede devolver?",
+  "numbers": [
+   [
+    90,
+    0
+   ]
+  ],
+  "contains": [
+   [
+    "gerente de servicio al cliente"
+   ]
+  ],
+  "cite_docs_any": [
+   "devoluciones",
+   "preguntas frecuentes",
+   "faq"
+  ]
+ },
+ {
+  "id": "P04",
+  "category": "politica",
+  "question": "¿Cuál es la tolerancia mensual de merma para la categoría Carnes?",
+  "numbers": [
+   [
+    2.5,
+    0
+   ]
+  ],
+  "cite_docs_any": [
+   "mermas",
+   "preguntas frecuentes",
+   "faq"
+  ]
+ },
+ {
+  "id": "P05",
+  "category": "politica",
+  "question": "¿Cuántos días hábiles tengo para presentar un plan de acción si la merma supera el umbral de alerta?",
+  "contains": [
+   [
+    "5 dias",
+    "cinco dias"
+   ]
+  ],
+  "cite_docs_any": [
+   "mermas",
+   "preguntas frecuentes",
+   "faq"
+  ]
+ },
+ {
+  "id": "P06",
+  "category": "politica",
+  "question": "¿Cuánto tarda en arrancar la planta de emergencia cuando hay una falla de energía?",
+  "contains": [
+   [
+    "30 segundos",
+    "treinta segundos"
+   ]
+  ],
+  "cite_docs_any": [
+   "apertura y cierre",
+   "preguntas frecuentes",
+   "faq"
+  ]
+ },
+ {
+  "id": "P07",
+  "category": "politica",
+  "question": "¿Cuál es el horario estándar de atención al público?",
+  "contains": [
+   [
+    "7:00",
+    "7 am",
+    "7 a.m."
+   ],
+   [
+    "22:00",
+    "10 pm",
+    "10 p.m."
+   ]
+  ],
+  "cite_docs_any": [
+   "apertura y cierre",
+   "preguntas frecuentes",
+   "faq"
+  ]
+ },
+ {
+  "id": "P08",
+  "category": "politica",
+  "question": "¿Qué descuento se aplica a un producto próximo a vencer cuando faltan 3 días para su caducidad?",
+  "numbers": [
+   [
+    35,
+    0
+   ]
+  ],
+  "cite_docs_any": [
+   "mermas",
+   "preguntas frecuentes",
+   "faq"
+  ]
+ },
+ {
+  "id": "P09",
+  "category": "politica",
+  "question": "¿Con cuántos días de anticipación se retiran los lácteos del anaquel?",
+  "contains": [
+   [
+    "2 dias",
+    "dos dias"
+   ]
+  ],
+  "cite_docs_any": [
+   "mermas",
+   "preguntas frecuentes",
+   "faq"
+  ]
+ },
+ {
+  "id": "X01",
+  "category": "rechazo",
+  "question": "¿Cuánto vamos a vender en octubre?",
+  "expect_refusal": true
+ },
+ {
+  "id": "X02",
+  "category": "rechazo",
+  "question": "¿Cuánto vendimos en septiembre de 2026?",
+  "expect_refusal": true
+ },
+ {
+  "id": "X03",
+  "category": "rechazo",
+  "question": "¿Cuánto vendió la tienda T05 en julio de 2026?",
+  "expect_refusal": true
+ },
+ {
+  "id": "X04",
+  "category": "rechazo",
+  "question": "¿Cuánta existencia había de SKU-1015 en la tienda T01 el 15 de julio de 2026?",
+  "expect_refusal": true
+ },
+ {
+  "id": "X05",
+  "category": "rechazo",
+  "question": "¿Cuántos días de vacaciones tiene el personal de tienda?",
+  "expect_refusal": true
+ },
+ {
+  "id": "X06",
+  "category": "rechazo",
+  "question": "¿A qué precio vende la competencia la leche entera de 1 L?",
+  "expect_refusal": true
+ },
+ {
+  "id": "S01",
+  "category": "seguimiento",
+  "question": "¿y en la tienda T02?",
+  "history": [
+   {
+    "role": "user",
+    "text": "¿Cuánto vendió el SKU-1041 en la tienda T01 el 1 de junio de 2026?"
+   },
+   {
+    "role": "assistant",
+    "text": "El SKU-1041 en la tienda T01 vendió un total de $837.00 MXN netos (con 27 unidades vendidas) el día 1 de junio de 2026. Este reporte corresponde al periodo del 1 de junio de 2026, abarca únicamente la tienda T01 e incluye devoluciones."
+   }
+  ],
+  "numbers": [
+   [
+    682,
+    0
+   ],
+   [
+    22,
+    0
+   ]
+  ]
+ },
+ {
+  "id": "S02",
+  "category": "seguimiento",
+  "question": "¿y cuál es el umbral de alerta?",
+  "history": [
+   {
+    "role": "user",
+    "text": "¿Cuál es la tolerancia mensual de merma para la categoría Lácteos?"
+   },
+   {
+    "role": "assistant",
+    "text": "La tolerancia mensual de merma para Lácteos es de 1.8 % de la venta neta de la categoría (Política de mermas y caducidad v3.2, §4)."
+   }
+  ],
+  "numbers": [
+   [
+    2.8,
+    0
+   ]
+  ],
+  "cite_docs_any": [
+   "mermas",
+   "preguntas frecuentes",
+   "faq"
+  ]
+ }
+]

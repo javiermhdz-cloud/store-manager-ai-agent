@@ -318,6 +318,7 @@ def stock_below_reorder(
         stock = stock[stock["tienda_id"] == store_id]
     if category is not None:
         stock = stock[stock["categoria"] == category]
+    total = len(stock)
     stock = stock.assign(
         faltante_reorden=stock["punto_reorden"] - stock["existencia"],
         fecha_corte=INVENTORY_SNAPSHOT_DATE.isoformat(),
@@ -328,6 +329,7 @@ def stock_below_reorder(
             "category": category,
             "inventory_snapshot_date": INVENTORY_SNAPSHOT_DATE.isoformat(),
         },
+        "total": total,
         "results": _clean_records(stock),
     }
 
@@ -354,6 +356,7 @@ def lots_expiring_soon(
         lots = lots[lots["tienda_id"] == store_id]
     if category is not None:
         lots = lots[lots["categoria"] == category]
+    total = len(lots)
     lots = lots.sort_values(["fecha_caducidad_lote_proximo", "tienda_id", "sku"])
     return {
         "filters": {
@@ -363,6 +366,7 @@ def lots_expiring_soon(
             "inventory_snapshot_date": INVENTORY_SNAPSHOT_DATE.isoformat(),
             "through_date": cutoff.isoformat(),
         },
+        "total": total,
         "results": _clean_records(lots),
     }
 
@@ -421,6 +425,7 @@ def ticket_counts(
         .reset_index()
         .sort_values(group_column)
     )
+    total = int(grouped["count"].sum())
     return {
         "filters": {
             "group_by": group_by,
@@ -431,6 +436,7 @@ def ticket_counts(
             "priority": priority,
             "state": state,
         },
+        "total": total,
         "results": _clean_records(grouped),
     }
 
@@ -450,6 +456,7 @@ def list_tickets(
     tickets, start, end = _filter_tickets(
         start_date, end_date, store_id, category, priority, state
     )
+    total = len(tickets)
     tickets = tickets.sort_values(["fecha_creacion", "ticket_id"], ascending=False).head(limit)
     return {
         "filters": {
@@ -461,6 +468,7 @@ def list_tickets(
             "state": state,
             "limit": limit,
         },
+        "total": total,
         "results": _clean_records(tickets),
     }
 

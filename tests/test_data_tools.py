@@ -122,6 +122,7 @@ def test_stock_below_reorder_uses_snapshot_and_deficit():
     assert row["existencia"] == 72
     assert row["punto_reorden"] == 260
     assert row["faltante_reorden"] == 188
+    assert result["total"] == 3
     assert result["filters"]["inventory_snapshot_date"] == "2026-09-01"
 
 
@@ -145,6 +146,7 @@ def test_stock_below_reorder_includes_row_exactly_at_reorder_point(monkeypatch):
     assert row["existencia"] == 100
     assert row["punto_reorden"] == 100
     assert row["faltante_reorden"] == 0
+    assert result["total"] == 1
 
 
 def test_lots_expiring_soon_counts_from_snapshot_date():
@@ -152,6 +154,7 @@ def test_lots_expiring_soon_counts_from_snapshot_date():
     result = lots_expiring_soon(within_days=6, store_id="T01")
     expiring = {row["sku"] for row in result["results"]}
     assert {"SKU-1015", "SKU-1003"} <= expiring
+    assert result["total"] == 10
     assert all(row["fecha_caducidad_lote_proximo"] <= "2026-09-07" for row in result["results"])
 
 
@@ -173,6 +176,7 @@ def test_lots_expiring_soon_flags_already_expired_lots(monkeypatch):
     result = lots_expiring_soon(within_days=6, store_id="T01")
     row = next(item for item in result["results"] if item["sku"] == "SKU-9002")
     assert row["ya_caducado"] is True
+    assert result["total"] == 1
 
 
 @pytest.mark.parametrize(
@@ -192,6 +196,7 @@ def test_ticket_counts_by_group(group_by, store_id, result_key, expected):
     result = ticket_counts(group_by=group_by, store_id=store_id)
     counts = {row[result_key]: row["count"] for row in result["results"]}
     assert counts == expected
+    assert result["total"] == sum(expected.values())
 
 
 def test_list_tickets_filters_structured_fields():
@@ -205,6 +210,14 @@ def test_list_tickets_filters_structured_fields():
         state="Resuelto",
     )
     assert [row["ticket_id"] for row in result["results"]] == [1001]
+    assert result["total"] == 1
+
+
+def test_list_tickets_total_precedes_limit():
+    result = list_tickets(store_id="T01", limit=1)
+
+    assert result["total"] == 72
+    assert len(result["results"]) == 1
 
 
 def test_search_tickets_fuzzy_matches_description():

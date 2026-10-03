@@ -155,6 +155,12 @@ def test_system_prompt_includes_source_and_ticket_search_guidance(monkeypatch, r
     router.answer("¿Qué información falta?")
 
     system_instruction = fake_llm.calls[0][1]["system_instruction"]
+    assert "Cuando una herramienta devuelva \"total\", úsalo como el número de elementos" in system_instruction
+    assert "Si se usó un límite y total lo supera, indica que la lista está truncada." in system_instruction
+    assert "total de 10 o menos, lista los elementos por nombre." in system_instruction
+    assert "En preguntas de ventas, indica el periodo solicitado" in system_instruction
+    assert "Para tickets, inventario y políticas, no menciones periodos, tiendas ni devoluciones salvo que la pregunta lo pida." in system_instruction
+    assert "No menciones la fecha de corte del inventario salvo que la pregunta lo pida." in system_instruction
     assert "No agregues notas ni aclaraciones sobre herramientas, periodos o fuentes que no usaste." in system_instruction
     assert 'Cita los documentos con su nombre completo y acentos, por ejemplo "Política de mermas y caducidad".' in system_instruction
     assert "el conteo es por palabra clave" in system_instruction
