@@ -320,3 +320,54 @@ def test_grounded_accepts_iso_date_present_in_tool_result():
     tool_results = [{"dia": "2026-06-01", "unidades": 22}]
     answer = "El 2026-06-01 se vendieron 22 unidades."
     assert router._grounded(answer, "pregunta", tool_results)
+
+class _ApiError(Exception):
+    def __init__(self, code):
+        super().__init__("api error")
+        self.code = code
+
+
+class _FlakyLLM(FakeLLM):
+    """Raises the queued errors first, then serves the normal responses."""
+
+    def __init__(self, errors, responses):
+        super().__init__(responses)
+        self.errors = list(errors)
+
+    def generate(self, messages, **kwargs):
+        if self.errors:
+            self.calls.append((list(messages), kwargs))
+            raise self.errors.pop(0)
+        return super().generate(messages, **kwargs)
+
+
+def test_invalid_argument_is_retried_once_with_fresh_messages(monkeypatch, router_logs):
+    fake_llm = _FlakyLLM([_ApiError(400)], [_response(_content("ok"), text="No tengo esa información.")])
+    _set_fake_llm(monkeypatch, fake_llm)
+
+    result = router.answer("pregunta")
+
+    assert result.startswith("No tengo esa información")
+    assert len(fake_llm.calls) == 2
+    assert fake_llm.calls[0][0] is not fake_llm.calls[1][0]
+    assert len(fake_llm.calls[1][0]) == 1
+
+
+def test_invalid_argument_twice_returns_generic_message(monkeypatch, router_logs):
+    fake_llm = _FlakyLLM([_ApiError(400), _ApiError(400)], [])
+    _set_fake_llm(monkeypatch, fake_llm)
+
+    result = router.answer("pregunta")
+
+    assert result.startswith("No pude consultar la información disponible")
+    assert len(fake_llm.calls) == 2
+
+
+def test_other_client_errors_are_not_retried(monkeypatch, router_logs):
+    fake_llm = _FlakyLLM([_ApiError(403)], [])
+    _set_fake_llm(monkeypatch, fake_llm)
+
+    result = router.answer("pregunta")
+
+    assert result.startswith("No pude consultar la información disponible")
+    assert len(fake_llm.calls) == 1

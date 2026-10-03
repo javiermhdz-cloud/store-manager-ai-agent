@@ -284,97 +284,102 @@ def _refusal() -> str:
 
 def answer(question: str, history: list[Any] | None = None) -> str:
     """Answer one question using up to five rounds of deterministic tools."""
-    messages = list(history or [])[-6:]
-    messages.append(types.Content(role="user", parts=[types.Part(text=question)]))
     used_tools: list[str] = []
     tool_results: list[dict[str, Any]] = []
+    number_of_tool_calls = 0
     usage_records: list[dict[str, object]] = []
     token_totals = {"input_tokens": 0, "output_tokens": 0, "thinking_tokens": 0}
-    number_of_tool_calls = 0
-    tool_rounds = 0
     final_answer = _refusal()
 
-    try:
-        while True:
-            response, usage = llm.generate(
-                messages,
-                tools=FUNCTION_TOOLS if tool_rounds < MAX_TOOL_ROUNDS else None,
-                system_instruction=SYSTEM_PROMPT,
-                interaction_type="unknown",
-            )
-            usage_records.append(usage)
-            for key in token_totals:
-                token_totals[key] += int(usage.get(key, 0))
+    # A 400 (INVALID_ARGUMENT) is retried once from scratch; nothing about the question is logged.
+    for attempt in range(2):
+        messages = list(history or [])[-6:]
+        messages.append(types.Content(role="user", parts=[types.Part(text=question)]))
+        tool_rounds = 0
+        final_answer = _refusal()
+        used_tools = []
+        tool_results = []
+        number_of_tool_calls = 0
+        try:
+            while True:
+                response, usage = llm.generate(
+                    messages,
+                    tools=FUNCTION_TOOLS if tool_rounds < MAX_TOOL_ROUNDS else None,
+                    system_instruction=SYSTEM_PROMPT,
+                    interaction_type="unknown",
+                )
+                usage_records.append(usage)
+                for key in token_totals:
+                    token_totals[key] += int(usage.get(key, 0))
 
-            response_content = _content(response)
-            if response_content is not None:
-                messages.append(response_content)
-            calls = _function_calls(response)
-            if not calls:
-                final_answer = _response_text(response)
-                break
-            if tool_rounds >= MAX_TOOL_ROUNDS:
-                final_answer = _refusal()
-                break
+                response_content = _content(response)
+                if response_content is not None:
+                    messages.append(response_content)
+                calls = _function_calls(response)
+                if not calls:
+                    final_answer = _response_text(response)
+                    break
+                if tool_rounds >= MAX_TOOL_ROUNDS:
+                    final_answer = _refusal()
+                    break
 
-            tool_rounds += 1
-            for call in calls:
-                tool_name = str(call.name)
-                used_tools.append(tool_name)
-                number_of_tool_calls += 1
-                raw_args = getattr(call, "args", None) or {}
-                args = dict(raw_args)
-                result = _execute_tool(tool_name, args)
-                tool_results.append(result)
-                _append_tool_result(messages, call, result)
+                tool_rounds += 1
+                for call in calls:
+                    tool_name = str(call.name)
+                    used_tools.append(tool_name)
+                    number_of_tool_calls += 1
+                    raw_args = getattr(call, "args", None) or {}
+                    args = dict(raw_args)
+                    result = _execute_tool(tool_name, args)
+                    tool_results.append(result)
+                    _append_tool_result(messages, call, result)
 
-        if not used_tools:
-            if not final_answer.lstrip().startswith("No tengo esa información") or not _grounded(
-                final_answer, question, []
-            ):
-                final_answer = _refusal()
-        elif not _grounded(final_answer, question, tool_results):
-            correction = types.Content(
-                role="user",
-                parts=[
-                    types.Part(
-                        text="Corrige tu respuesta: elimina cualquier cifra que no aparezca literalmente en la pregunta o en los resultados de herramientas. Responde brevemente y no agregues cifras nuevas."
-                    )
-                ],
-            )
-            messages.append(correction)
-            response, usage = llm.generate(
-                messages,
-                system_instruction=SYSTEM_PROMPT,
-                interaction_type="unknown",
-            )
-            usage_records.append(usage)
-            for key in token_totals:
-                token_totals[key] += int(usage.get(key, 0))
-            response_content = _content(response)
-            if response_content is not None:
-                messages.append(response_content)
-            retry_answer = _response_text(response)
-            if _function_calls(response) or not _grounded(retry_answer, question, tool_results):
-                _log_grounding_failure()
-                final_answer = _refusal()
+            if not used_tools:
+                if not final_answer.lstrip().startswith("No tengo esa información") or not _grounded(
+                    final_answer, question, []
+                ):
+                    final_answer = _refusal()
+            elif not _grounded(final_answer, question, tool_results):
+                correction = types.Content(
+                    role="user",
+                    parts=[
+                        types.Part(
+                            text="Corrige tu respuesta: elimina cualquier cifra que no aparezca literalmente en la pregunta o en los resultados de herramientas. Responde brevemente y no agregues cifras nuevas."
+                        )
+                    ],
+                )
+                messages.append(correction)
+                response, usage = llm.generate(
+                    messages,
+                    system_instruction=SYSTEM_PROMPT,
+                    interaction_type="unknown",
+                )
+                usage_records.append(usage)
+                for key in token_totals:
+                    token_totals[key] += int(usage.get(key, 0))
+                response_content = _content(response)
+                if response_content is not None:
+                    messages.append(response_content)
+                retry_answer = _response_text(response)
+                if _function_calls(response) or not _grounded(retry_answer, question, tool_results):
+                    _log_grounding_failure()
+                    final_answer = _refusal()
+                else:
+                    final_answer = retry_answer
+            break
+        except Exception as error:
+            if attempt == 0 and llm._status_code(error) == 400:
+                continue
+            if os.getenv("LLM_DEBUG") == "1":
+                print(f"[router error] {type(error).__name__}: {error}")
+            if llm._is_retryable(error):
+                final_answer = "El servicio del modelo está saturado, intenta de nuevo en un momento."
             else:
-                final_answer = retry_answer
-    #except Exception:
-    #    final_answer = "No pude consultar la información disponible. Verifica la configuración e inténtalo de nuevo."
-    except Exception:
-        import traceback; traceback.print_exc()
-        final_answer = "No pude consultar la información disponible. Verifica la configuración e inténtalo de nuevo."
-    except Exception as error:
-        if os.getenv("LLM_DEBUG") == "1":
-            print(f"[router error] {type(error).__name__}: {error}")
-        if llm._is_retryable(error):
-            final_answer = "El servicio del modelo está saturado, intenta de nuevo en un momento."
-        else:
-            final_answer = "No pude consultar la información disponible. Verifica la configuración e inténtalo de nuevo."
-    finally:
-        interaction_type = _interaction_type(used_tools)
-        llm.finalize_usage_records(usage_records, interaction_type)
-        _log_interaction(interaction_type, used_tools, number_of_tool_calls, token_totals)
+                final_answer = "No pude consultar la información disponible. Verifica la configuración e inténtalo de nuevo."
+            break
+
+    interaction_type = _interaction_type(used_tools)
+    llm.finalize_usage_records(usage_records, interaction_type)
+    _log_interaction(interaction_type, used_tools, number_of_tool_calls, token_totals)
 
     return final_answer

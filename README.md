@@ -34,8 +34,7 @@ En GitHub Codespaces, guarda la clave como secreto `GEMINI_API_KEY` (Settings �
 |---|---|---|
 | `GEMINI_API_KEY` | Clave de la API (obligatoria) | — |
 | `LLM_MODEL` | Modelo principal | `gemini-3.5-flash` |
-| `LLM_FALLBACK_MODEL` | Modelo de respaldo si el principal falla por s
-aturación (503/500) | sin respaldo |
+| `LLM_FALLBACK_MODEL` | Modelo de respaldo si el principal falla por saturación (503/500) | sin respaldo |
 | `LLM_THINKING_LEVEL` | Nivel de razonamiento de los modelos Gemini (no aplica a Gemma) | `low` |
 | `LLM_MIN_INTERVAL_SECONDS` | Pausa mínima, en segundos, entre llamadas al modelo | `0` (sin pausa) |
 | `LLM_DEBUG` | Con `1`, imprime el tipo de error del router (nunca la pregunta ni la clave) | apagado |
@@ -85,6 +84,13 @@ python eval/run_eval.py --regrade      # recalifica respuestas guardadas, sin ll
 ## Registros
 
 `logs/` (no se sube al repositorio) guarda el consumo de tokens por llamada y un renglón por pregunta con su tipo, las herramientas usadas y los tokens. No se guarda el texto de las preguntas ni de las respuestas.
+
+## Resultados
+
+Evaluación sobre 36 preguntas con `gemma-4-31b-it`: **34 de 36 correctas (94%)**.
+Datos 17/19, políticas 9/9 (10 de 10 citas con documento y sección correctos), rechazos 6/6,
+seguimiento 2/2. Promedio por pregunta: 5,077 tokens de entrada, 83 de salida y 405 de
+razonamiento, en 103 segundos. Detalle en `eval/report_final.md`.
 
 ## Límites conocidos
 
